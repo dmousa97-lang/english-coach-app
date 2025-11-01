@@ -269,8 +269,6 @@
             }
             // --- END STABILIZATION LOGIC ---
 
-            console.log(`TTS Request: Generating audio for text: "${text}" (API Payload: "${phraseForTTS}") with voice: ${voiceName}`);
-
             const url = `${apiUrlBase}/${ttsModel}:generateContent?key=${apiKey}`;
 
             const payload = {
@@ -298,22 +296,18 @@
                     
                     if (!response.ok) {
                         const errorMsg = result.error?.message || `API call failed with status ${response.status}.`;
-                        console.error(`Attempt ${attempt + 1} failed: ${errorMsg}`, result);
                         if (attempt === maxRetries - 1) {
                             throw new Error(`TTS API failed to authenticate or respond: ${errorMsg}`);
                         }
-                        // Continue to backoff/retry
                     } else {
                         // Look for the audio part with the L16 MIME type
                         const candidate = result.candidates?.[0];
                         const part = candidate?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.startsWith('audio/L16'));
 
                         if (!part || !part.inlineData || !part.inlineData.data) {
-                            console.error(`Attempt ${attempt + 1} failed: TTS API Response missing audio data.`, result);
                             if (attempt === maxRetries - 1) { 
                                 throw new Error("TTS model could not generate audio. The text may be too short or flagged.");
                             }
-                            // Continue to backoff/retry
                         } else {
                             // Success path
                             const audioData = part.inlineData.data;
@@ -341,7 +335,6 @@
                     }
 
                 } catch (error) {
-                    console.error(`Attempt ${attempt + 1} failed with unhandled error.`, error);
                     if (attempt === maxRetries - 1) {
                         throw error;
                     }
@@ -349,7 +342,6 @@
 
                 // Exponential backoff
                 const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); 
-                console.warn(`Retrying TTS in ${Math.ceil(delay / 1000)}s...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -393,7 +385,6 @@
                 };
 
             } catch (error) {
-                console.error("TTS Error:", error);
                 updateStatus(`Error generating speech: ${error.message}.`, true);
             } finally {
                 ttsButton.disabled = false;
@@ -455,22 +446,17 @@
                     statusEl.innerHTML = `
                         <div class="p-3 bg-red-100 border border-red-300 rounded-lg">
                             <p class="text-base text-red-700 font-bold">⚠️ Microphone Access Blocked</p>
-                            <p class="text-sm text-red-600 mt-1">Your browser settings are permanently blocking microphone access for this site. Because you previously denied it, the browser will not prompt you again.</p>
-                            <p class="text-sm text-red-600 mt-2 font-bold">To fix this, you must manually go to your browser's site settings and change the microphone permission from 'Block' to 'Ask' or 'Allow'.</p>
+                            <p class="text-sm text-red-600 mt-1">Your browser is blocking microphone access. To fix this, you must manually go to your browser's site settings and change the microphone permission to 'Allow'.</p>
                         </div>
                     `;
                     return false;
-                } else if (permissionStatus.state === 'prompt') {
-                    statusEl.textContent = "Microphone ready to be requested. Click 'Start Recording' to see the browser prompt.";
-                    recordButton.disabled = false;
-                } else if (permissionStatus.state === 'granted') {
-                    statusEl.textContent = "Microphone access is already granted! Click 'Start Recording' to begin.";
+                } else if (permissionStatus.state === 'prompt' || permissionStatus.state === 'granted') {
+                    statusEl.textContent = `Microphone is ready. Click 'Start Recording' when you're ready to speak.`;
                     recordButton.disabled = false;
                 }
                 return true;
             } catch (e) {
                 // Fallback for browsers that don't support navigator.permissions.query
-                console.warn("Could not query microphone permission status, falling back to attempting access:", e);
                 statusEl.textContent = "Microphone status uncertain. Click 'Start Recording' to test access.";
                 return true; 
             }
@@ -501,7 +487,7 @@
                 
                 // Set initial status for correction audio
                 correctAudioContainer.classList.remove('hidden'); 
-                correctAudioLabel.textContent = "Waiting for analysis to generate correct pronunciation...";
+                correctAudioLabel.textContent = "Ready to record...";
 
 
                 mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -537,7 +523,6 @@
                 updateStatus("Recording started. Please speak clearly.");
 
             } catch (error) {
-                console.error("Microphone access error:", error);
                 // Simple error message here, as checkMicrophonePermission handles the detailed block message
                 if (error.name === "NotAllowedError" || error.message.includes("Permission denied")) {
                     updateStatus("Microphone access was denied. Please ensure you click 'Allow' in the browser pop-up.", true);
@@ -632,7 +617,6 @@
                 const apiUrl = `${apiUrlBase}/${correctionModel}:generateContent?key=${apiKey}`;
 
                 const payload = {
-                    // *** REVISED PAYLOAD STRUCTURE TO BE MORE EXPLICIT ***
                     model: correctionModel, 
                     contents: [{
                         parts: [
@@ -651,35 +635,49 @@
                         responseSchema: CorrectionSchema
                     }
                 };
-                // *** END REVISED PAYLOAD ***
 
-                // 4. Call the Correction API
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                // 4. Call the Correction API with exponential backoff
+                let response;
+                let result;
+                let maxRetries = 5;
 
-                const result = await response.json();
-                
-                // --- Handle 403 Authentication Error explicitly ---
-                if (!response.ok) {
-                    if (response.status === 403) {
-                         throw new Error("Authentication Failed (403). The API key was rejected. This is usually an environmental issue. Please try again in a moment.");
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        result = await response.json();
+                        
+                        if (response.ok) {
+                            jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (jsonText) {
+                                break; // Success! Exit loop
+                            } else {
+                                throw new Error("API returned an empty content part.");
+                            }
+                        } else if (response.status === 403 && attempt === maxRetries - 1) {
+                            throw new Error("Authentication Failed (403). The environment's API key was rejected after multiple retries.");
+                        } else if (attempt === maxRetries - 1) {
+                            const errorMsg = result.error?.message || `API call failed with status ${response.status}.`;
+                            throw new Error(errorMsg);
+                        }
+
+                    } catch (error) {
+                         if (attempt === maxRetries - 1) {
+                            throw error; // Re-throw if last attempt failed
+                        }
                     }
-                    const errorMsg = result.error?.message || `API call failed with status ${response.status}.`;
-                    console.error("API Call Error Details:", result);
-                    throw new Error(errorMsg);
+
+                    // Exponential backoff
+                    const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); 
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
+
                 
-                jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) {
-                     // Handle the case where the status is OK but the content is empty
-                     console.error("AI returned empty content or structure in candidates part.", result);
-                     throw new Error("AI returned empty content or structure.");
-                }
-                
-                // Robustly strip markdown and preambles from the JSON string
+                // 5. Process Successful (or last failed) response
                 jsonText = jsonText.trim();
                 jsonText = jsonText.replace(/^```(json|JSON)?\s*/, '');
                 jsonText = jsonText.replace(/\s*```$/, '');
@@ -698,29 +696,29 @@
                     const phraseColor = isCorrect ? 'text-green-700' : 'text-yellow-700';
                     const titleText = isCorrect ? 'Great Job! Pronunciation Correct' : 'Needs Practice: AI Feedback';
 
-                    // 5. Apply main feedback area styling
+                    // 6. Apply main feedback area styling
                     feedbackArea.className = `mt-6 p-4 border-l-4 rounded-lg ${bgColor} ${borderColor}`;
                     feedbackArea.classList.remove('hidden');
 
-                    // 6. Apply title styling and text
+                    // 7. Apply title styling and text
                     feedbackTitle.className = `text-lg font-semibold ${titleColor}`;
                     feedbackTitle.textContent = titleText;
                     
-                    // 7. Set and display the Target Phrase (ALWAYS VISIBLE)
+                    // 8. Set and display the Target Phrase (ALWAYS VISIBLE)
                     targetPhraseDisplay.textContent = `Target Phrase: "${targetPhrase}"`;
                     targetPhraseDisplay.className = `text-sm mt-2 italic font-semibold ${phraseColor}`;
                     
-                    // 8. Display the text feedback
+                    // 9. Display the text feedback
                     correctionOutput.textContent = feedback;
                     
-                    // 9. Prepare for Correct Pronunciation Audio Generation
+                    // 10. Prepare for Correct Pronunciation Audio Generation
                     correctAudioContainer.classList.remove('hidden'); 
                     correctAudioLabel.textContent = "Generating correct pronunciation...";
                     correctAudioContainer.classList.add('border-t', 'p-3', isCorrect ? 'border-green-200' : 'border-yellow-200');
                     correctAudioLabel.classList.add(isCorrect ? 'text-green-700' : 'text-yellow-700');
 
 
-                    // 10. Always attempt to generate correct audio if a target phrase exists
+                    // 11. Always attempt to generate correct audio if a target phrase exists
                     updateStatus(`Analysis complete. Now generating correct audio for reference...`);
                     
                     const cleanTargetPhrase = sanitizeText(targetPhrase);
@@ -740,9 +738,6 @@
                         updateStatus(isCorrect ? "Fantastic! Your pronunciation was clear and accurate. Listen to the AI's pronunciation for reference." : "Analysis and correction audio complete! Listen and practice.");
                         
                     } catch (ttsError) {
-                        console.error("Correction TTS Error:", ttsError);
-                        
-                        // Handle failure gracefully
                         correctAudioLabel.textContent = `Error: Could not generate correct audio. (${ttsError.message})`;
                         correctAudioPlayback.src = '';
                         updateStatus(`Analysis complete, but failed to generate correction audio: ${ttsError.message}`, true);
@@ -753,9 +748,6 @@
                 }
 
             } catch (error) {
-                console.error("Analysis Error:", error);
-                
-                // --- Updated message for 403 error ---
                 let displayMessage = `Sorry, an error occurred during analysis: ${error.message}.`;
                 if (error.message.includes("403")) {
                     displayMessage = "Authentication Error (403): The system failed to load the necessary credentials. Please refresh the page and try again.";
@@ -763,7 +755,7 @@
                 
                 correctionOutput.textContent = displayMessage;
                 feedbackArea.classList.remove('hidden');
-                updateStatus("Failed to analyze audio. Please try recording again or check the console.", true);
+                updateStatus("Failed to analyze audio. Please try recording again.", true);
             } finally {
                 submitButton.disabled = false;
                 recordButton.disabled = false;
