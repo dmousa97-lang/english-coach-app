@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI English Coach</title>
-    <!-- Load Tailwind CSS -->
+    <title>AI English Accent Coach</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            /* Ensure the body of the iFrame/page has a minimal background */
-            background-color: #f7f9fb; 
+            background-color: #f7f9fb;
         }
         .container {
             max-width: 900px;
@@ -43,19 +41,13 @@
         .btn-stop:hover {
             background-color: #d97706; /* Amber 600 */
         }
-        /* Pulse animation for active recording */
         .recording-active {
             animation: pulse-red 1.5s infinite;
         }
         @keyframes pulse-red {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-            }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
         }
-        /* Standard loader CSS */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3b82f6;
@@ -65,259 +57,370 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 sm:p-8 min-h-screen">
 
-    <div class="container py-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">AI English Pronunciation Coach</h1>
-        <p class="text-gray-600 mb-8">Practice speaking and get instant, detailed accent feedback from AI.</p>
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">🗣️ AI English Pronunciation Coach</h1>
+        <p class="text-gray-500 mt-2">Practice speaking and get instant, detailed accent feedback from AI.</p>
+        <p id="status-message" class="mt-4 text-sm font-medium text-gray-700"></p>
+    </header>
 
-        <!-- TTS Section (AI Says, You Listen) -->
-        <div class="card mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">1. AI Says, You Listen</h2>
-            <p class="text-gray-600 mb-4">Type a sentence below, and the AI will pronounce it clearly. Use the dropdown to choose a voice from your device.</p>
-            
-            <textarea id="tts-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-4 h-20" placeholder="e.g., The quick brown fox jumps over the lazy dog.">The weather is lovely today, isn't it?</textarea>
-            
-            <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                <select id="voice-select" class="p-3 border border-gray-300 rounded-lg w-full sm:w-auto">
-                    <option>Loading voices…</option>
+    <div class="container space-y-8">
+
+        <!-- Section 1: AI Speaks (TTS) -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-2.828l.707.707.707-.707m-1.414 1.414l.707.707.707-.707m-1.414 1.414l.707.707.707-.707M12 21V3m-4 8h8"/></svg>
+                1. AI Says, You Listen
+            </h2>
+            <p class="text-gray-600 mb-4">Type a sentence below, and the AI will pronounce it clearly. You can try different voices!</p>
+
+            <textarea id="tts-input" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., The quick brown fox jumps over the lazy dog."></textarea>
+
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 mt-4 items-center">
+                <select id="voice-select" class="p-2 border border-gray-300 rounded-lg bg-white w-full sm:w-auto">
+                    <option value="Kore">Kore (Clear)</option>
+                    <option value="Zephyr">Zephyr (Bright)</option>
+                    <option value="Puck">Puck (Upbeat)</option>
+                    <option value="Charon">Charon (Informative)</option>
+                    <option value="Leda">Leda (Youthful)</option>
                 </select>
-                <button id="tts-button" onclick="speakText()" disabled 
-                    class="btn-primary flex items-center justify-center px-6 py-3 rounded-lg font-semibold w-full sm:w-auto hover:shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-2">
-                        <path d="M11.536 12.634a1.125 1.125 0 0 1 0-2.268c.509-.13.916-.188 1.121-.264A6.002 6.002 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75a6.002 6.002 0 0 0-6.657 2.472c.205.076.612.134 1.121.264Zm-2.31 3.227a.959.959 0 0 1-.786 0l-.062-.027-.11-.05V15a.75.75 0 0 0-1.5 0v.702a.856.856 0 0 0 .285.64l.432.418c.071.069.172.10.272.094l.057-.003.047-.005.018-.002.046-.005a.798.798 0 0 0 .422-.446c.01-.035.021-.072.032-.109.043-.146.068-.302.073-.46l.001-.023ZM15.75 16.5a.75.75 0 0 0 0-1.5v.75Zm.75.75a.75.75 0 0 0 0-1.5v.75Z" />
-                        <path fill-rule="evenodd" d="M12 2.25c-5.407 0-9.75 4.343-9.75 9.75s4.343 9.75 9.75 9.75 9.75-4.343 9.75-9.75S17.407 2.25 12 2.25Zm-5.375 7.125a.75.75 0 0 1 1.5 0v.75a4.5 4.5 0 0 0 9 0v-.75a.75.75 0 1 1 1.5 0v.75a6 6 0 0 1-12 0v-.75ZM7 15.75a.75.75 0 0 0 1.5 0v-2.25H7.75v2.25Zm8 0a.75.75 0 0 0 1.5 0v-2.25h-.75v2.25Z" clip-rule="evenodd" />
-                    </svg>
-                    <span id="tts-button-text">Read Aloud</span>
+                <button id="tts-button" class="btn-primary flex items-center justify-center font-bold px-6 py-2 rounded-lg w-full sm:w-auto" onclick="speakText()">
+                    <span id="tts-loader" class="hidden loader mr-2"></span>
+                    <svg id="tts-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-4 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8a1 1 0 012 0v2a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    <span>Read Aloud</span>
                 </button>
             </div>
-            <p id="tts-status" class="mt-3 text-sm font-medium text-gray-700 h-5"></p>
         </div>
 
-        <!-- ASR Section (You Speak, AI Corrects) -->
+        <!-- Section 2: User Speaks (ASR & Correction) -->
         <div class="card">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">2. You Speak, AI Corrects</h2>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a1 1 0 01-1-1v-2a1 1 0 011-1m0 4a1 1 0 001-1v-2a1 1 0 00-1-1m-1 4v2a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 00-1-1h-2z"/></svg>
+                2. You Speak, AI Corrects
+            </h2>
             <p class="text-gray-600 mb-4">Record yourself speaking a phrase. The AI will analyze your accent, transcribe what it heard, and suggest improvements.</p>
-            
-            <!-- Recording Controls -->
-            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-4">
-                <button id="record-button" onclick="startRecording()" 
-                    class="btn-record flex items-center justify-center px-6 py-3 rounded-lg font-semibold w-full sm:w-auto hover:shadow-md">
-                    <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-2">
-                        <path d="M8.25 4.5a3.75 3.75 0 1 1 7.5 0v8.25a3.75 3.75 0 1 1-7.5 0V4.5Z" />
-                        <path d="M7.5 15.75a4.5 4.5 0 0 0 9 0v-3.75c0-.621-.504-1.125-1.125-1.125h-6.75c-.621 0-1.125.504-1.125 1.125v3.75Z" />
-                        <path fill-rule="evenodd" d="M3.375 17.25a.75.75 0 0 0 0 1.5c.299 0 .584.072.845.205.188.09.387.163.596.225.86.255 1.743.385 2.65.385 1.341 0 2.639-.364 3.774-1.038.21-.125.419-.23.633-.325A11.968 11.968 0 0 0 12 18a11.968 11.968 0 0 0-.25-2.616c-.214-.095-.423-.2-.633-.325-1.135-.674-2.433-1.038-3.774-1.038-1.34 0-2.638.364-3.773 1.038a1.296 1.296 0 0 0-.54.218.75.75 0 0 0-.012 1.354Z" clip-rule="evenodd" />
-                    </svg>
+
+            <div class="flex space-x-4 items-center mb-4">
+                <button id="record-button" class="btn-record flex items-center justify-center font-bold px-6 py-2 rounded-lg transition-all" onclick="startRecording()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.707 1.707L10.586 10l-3.293 3.293a1 1 0 101.414 1.414l4-4a1 1 0 000-1.414l-4-4A1 1 0 0010 7z"/></svg>
                     <span id="record-text">Start Recording</span>
                 </button>
-                <button id="stop-button" onclick="stopRecording()" disabled 
-                    class="btn-stop flex items-center justify-center px-6 py-3 rounded-lg font-semibold w-full sm:w-auto opacity-70 hover:opacity-100 hover:shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-2">
-                        <path fill-rule="evenodd" d="M5.25 9a3.75 3.75 0 0 1 7.5 0v.75c0 .414.336.75.75.75h2.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 0-.75.75v.75a3.75 3.75 0 1 1-7.5 0v-4.5Zm6 3.75H12a.75.75 0 0 0-.75.75v.75a2.25 2.25 0 1 0 4.5 0v-.75a.75.75 0 0 0-.75-.75h-.25v-2.25H12v2.25Z" clip-rule="evenodd" />
-                        <path d="M12 2.25a.75.75 0 0 1 .75.75v8.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75Z" />
-                    </svg>
+
+                <button id="stop-button" class="btn-stop flex items-center justify-center font-bold px-6 py-2 rounded-lg disabled:opacity-50" onclick="stopRecording()" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"/></svg>
                     Stop Recording
-                </button>
-                <button id="submit-audio-button" onclick="submitAudioForCorrection()" disabled 
-                    class="btn-primary flex items-center justify-center px-6 py-3 rounded-lg font-semibold w-full sm:w-auto hover:shadow-md">
-                    <span class="flex items-center">
-                        <span id="correction-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 mr-2">
-                                <path fill-rule="evenodd" d="M10.5 3A1.5 1.5 0 0 0 9 4.5v3.136a5.503 5.503 0 0 0 1.5-.18V6.75a.75.75 0 0 1 1.5 0v7.012A7.502 7.502 0 0 1 10.5 15h.75a.75.75 0 0 1 0 1.5H9.75v.007A1.5 1.5 0 0 0 11.25 18H13.5a7.5 7.5 0 0 0 7.5-7.5V9.75a1.5 1.5 0 0 0-1.5-1.5h-3a1.5 1.5 0 0 0-1.5 1.5v3a.75.75 0 0 1-1.5 0V9.75A1.5 1.5 0 0 0 15 8.25h3a.75.75 0 0 1 0 1.5v1.5a6 6 0 0 1-6 6h-1.5A7.502 7.502 0 0 1 3 10.5V6.75a.75.75 0 0 1 1.5 0v3.75a6 6 0 0 0 6 6H12a.75.75 0 0 1-.75.75H9.75v.007Z" clip-rule="evenodd" />
-                            </svg>
-                        </span>
-                        <span id="correction-loader" class="loader hidden mr-2"></span>
-                        Analyze Pronunciation
-                    </span>
                 </button>
             </div>
 
-            <!-- Status and Playback -->
-            <p id="mic-record-status" class="text-sm font-medium h-5 text-gray-500 mb-4">Click 'Start Recording' to begin.</p>
-            <audio id="audio-playback" controls class="w-full mt-4 hidden" aria-label="Your recorded audio playback"></audio>
+            <audio id="audio-playback" controls class="w-full mt-2 hidden"></audio>
 
-            <details class="text-sm text-gray-500 mt-4 cursor-pointer">
-                <summary>Microphone Troubleshooting?</summary>
-                <p class="mt-2 p-2 bg-gray-100 rounded-lg">
-                    If you see "Permission denied" or "NotAllowedError", the most common cause is that the page or iFrame you are using
-                    (like a WordPress embed) is **blocking microphone access for security reasons**. You need to check your browser's
-                    site settings or contact your hosting provider/theme developer to allow microphone access within the embedded element.
-                </p>
-            </details>
+            <button id="submit-audio-button" class="btn-primary flex items-center justify-center font-bold px-6 py-2 rounded-lg w-full mt-4 disabled:opacity-50" onclick="submitAudioForCorrection()" disabled>
+                <span id="correction-loader" class="hidden loader mr-2"></span>
+                <svg id="correction-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zm3 5a1 1 0 100 2h6a1 1 0 100-2H7z"/></svg>
+                <span>Analyze Pronunciation</span>
+            </button>
 
-            <!-- AI Feedback and Correction Output -->
-            <div id="feedback-area" class="mt-6 p-4 border-l-4 rounded-lg border-gray-300 bg-gray-50 hidden">
-                <h3 id="feedback-title" class="text-lg font-semibold text-gray-800 mb-2"></h3>
-                <p id="target-phrase-display" class="text-sm mt-2 italic font-semibold text-gray-700"></p>
-                <div id="correction-output" class="text-gray-700 mt-3 whitespace-pre-wrap"></div>
+            <!-- Correction Feedback Area -->
+            <div id="feedback-area" class="mt-6 p-4 border-l-4 rounded-lg hidden">
+                <h3 id="feedback-title" class="text-lg font-semibold">AI Feedback:</h3>
                 
-                <!-- Correct Pronunciation Reference -->
-                <div id="correct-audio-container" class="mt-4 pt-3">
-                    <p id="correct-audio-label" class="text-sm font-medium text-gray-700">Waiting for analysis...</p>
-                    <!-- Native TTS is used directly, so no audio element is needed here for AI reference playback -->
+                <!-- Target phrase is now always displayed here -->
+                <p id="target-phrase-display" class="text-sm mt-2 italic font-semibold"></p> 
+                
+                <!-- This container now ALWAYS holds the audio player and its label -->
+                <div id="correct-audio-container" class="mt-4 p-3 border-t">
+                    <p id="correct-audio-label" class="text-sm font-semibold mb-2"></p>
+                    <audio id="correct-audio-playback" controls class="w-full"></audio>
                 </div>
+                
+                <div id="correction-output" class="text-gray-700 mt-4"></div>
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="module">
         // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const apiKey = "" // API key is handled automatically by the environment
-        const correctionModel = 'gemini-2.5-flash-preview-09-2025'; // ASR/Correction still uses API
+        const ttsModel = 'gemini-2.5-flash-preview-tts';
+        const correctionModel = 'gemini-2.5-flash-preview-09-2025';
         const apiUrlBase = "https://generativelanguage.googleapis.com/v1beta/models";
 
-        // UI element constants
-        const recordButton = document.getElementById('record-button');
-        const stopButton = document.getElementById('stop-button');
-        const submitButton = document.getElementById('submit-audio-button');
-        const micRecordStatus = document.getElementById('mic-record-status');
-        const ttsStatus = document.getElementById('tts-status');
-        const recordText = document.getElementById('record-text');
-
-        // — Global Audio URL Management —
+        // --- Global Audio URL Management ---
         let userAudioUrl = null;
+        let correctAudioUrl = null;
+
         function revokeObjectUrls() {
             // Revokes all currently tracked Blob URLs to prevent resource conflicts
             if (userAudioUrl) {
                 URL.revokeObjectURL(userAudioUrl);
                 userAudioUrl = null;
             }
+            if (correctAudioUrl) {
+                URL.revokeObjectURL(correctAudioUrl);
+                correctAudioUrl = null;
+            }
+        }
+        
+        // --- Core Utility Functions ---
+
+        function updateStatus(message, isError = false) {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.className = `mt-4 text-sm font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
         }
 
-        // — Status Update Functions (Localized) —
-        function updateMicStatus(message = '', isError = false) {
-            micRecordStatus.textContent = message;
-            // Enhanced error reporting with specific colors
-            micRecordStatus.className = `text-sm font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
-        }
-        function updateTtsStatus(message = '', isError = false) {
-            ttsStatus.textContent = message;
-            ttsStatus.className = `mt-3 text-sm font-medium ${isError ? 'text-red-600' : 'text-gray-700'} h-5`;
-        }
-        function clearTtsStatus() {
-            updateTtsStatus();
+        /** Converts a Base64 string to an ArrayBuffer. */
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
         }
 
-        // ——————————————————————————
-        // — Section 1: AI Speaks (TTS) – NOW USING NATIVE WEB SPEECH API —
-        // ——————————————————————————
-        const synth = window.speechSynthesis;
-        let availableVoices = [];
-        const voiceSelect = document.getElementById('voice-select');
-        const ttsButtonText = document.getElementById('tts-button-text');
+        /**
+         * Converts raw signed 16-bit PCM audio data to a standard WAV Blob.
+         * The TTS API returns L16 audio data.
+         */
+        function pcmToWav(pcm16, sampleRate = 24000) {
+            const numChannels = 1;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataLength = pcm16.length * bytesPerSample;
 
-        /** Populates the voice dropdown with English voices available on the device. */
-        function populateVoiceList() {
-            if (!synth) return;
+            const buffer = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer);
 
-            // Wait for voices to be loaded by the browser
-            availableVoices = synth.getVoices().sort((a, b) => a.name.localeCompare(b.name));
-            voiceSelect.innerHTML = "";
-
-            // Filter for English voices (en-US, en-GB, en-AU, etc.)
-            const englishVoices = availableVoices.filter(voice => voice.lang.startsWith('en'));
-
-            if (englishVoices.length === 0) {
-                const option = new Option("No English Voices Found", "");
-                voiceSelect.add(option);
-                document.getElementById('tts-button').disabled = true;
-            } else {
-                let defaultSelected = false;
-                englishVoices.forEach(voice => {
-                    const option = new Option(`${voice.name} (${voice.lang})`, voice.name);
-                    if (voice.default) {
-                        option.selected = true;
-                        defaultSelected = true;
-                    }
-                    voiceSelect.add(option);
-                });
-                if (!defaultSelected) {
-                    // Select the first English voice if no default was found
-                    voiceSelect.options[0].selected = true;
+            // Helper to write a string to the DataView
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
                 }
-                document.getElementById('tts-button').disabled = false;
+            };
+
+            let offset = 0;
+
+            // 1. RIFF chunk descriptor
+            writeString(view, offset, 'RIFF'); offset += 4; // ChunkID
+            view.setUint32(offset, 36 + dataLength, true); offset += 4; // ChunkSize
+            writeString(view, offset, 'WAVE'); offset += 4; // Format
+
+            // 2. 'fmt ' sub-chunk
+            writeString(view, offset, 'fmt '); offset += 4; // Subchunk1ID
+            view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size (16 for PCM)
+            view.setUint16(offset, 1, true); offset += 2; // AudioFormat (1 for PCM)
+            view.setUint16(offset, numChannels, true); offset += 2; // NumChannels
+            view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
+            view.setUint32(offset, byteRate, true); offset += 4; // ByteRate
+            view.setUint16(offset, blockAlign, true); offset += 2; // BlockAlign
+            view.setUint16(offset, bytesPerSample * 8, true); offset += 2; // BitsPerSample (16)
+
+            // 3. 'data' sub-chunk
+            writeString(view, offset, 'data'); offset += 4; // Subchunk2ID
+            view.setUint32(offset, dataLength, true); offset += 4; // Subchunk2Size
+
+            // Write the PCM data
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(offset, pcm16[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+
+        /**
+         * Generates TTS audio, applying stabilization hacks and retry logic internally.
+         * @param {string} text The text prompt for TTS.
+         * @param {string} voiceName The voice to use.
+         * @param {HTMLAudioElement} audioElement The element to assign the generated audio to.
+         * @param {number} maxRetries The maximum number of retry attempts.
+         */
+        async function generateTtsAudio(text, voiceName, audioElement, maxRetries = 5) {
+            if (!text || text.trim().length === 0) {
+                throw new Error("TTS generation skipped: Input text is empty.");
+            }
+            
+            // --- TTS STABILIZATION LOGIC (Applied only to the API payload) ---
+            let phraseForTTS = text;
+            const minimumLengthForPrefix = 10;
+            
+            // 1. Stabilization Prefix: For very short phrases, prepend a subtle instructional phrase.
+            if (phraseForTTS.length < minimumLengthForPrefix) { 
+                phraseForTTS = `The phrase is, ${phraseForTTS}`; 
+            }
+            
+            // 2. Terminal Punctuation: Ensure terminal punctuation exists for API stability.
+            if (!/[.?!]$/.test(phraseForTTS)) {
+                phraseForTTS += '.';
+            }
+            // --- END STABILIZATION LOGIC ---
+
+            console.log(`TTS Request: Generating audio for text: "${text}" (API Payload: "${phraseForTTS}") with voice: ${voiceName}`);
+
+            const url = `${apiUrlBase}/${ttsModel}:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: phraseForTTS }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: voiceName }
+                        }
+                    }
+                },
+                model: ttsModel
+            };
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    
+                    const candidate = result.candidates?.[0];
+                    // Look for the audio part with the L16 MIME type
+                    const part = candidate?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.startsWith('audio/L16'));
+
+
+                    if (!part || !part.inlineData || !part.inlineData.data) {
+                         console.error(`Attempt ${attempt + 1} failed: TTS API Response missing audio data.`, result);
+                        
+                        if (candidate?.finishReason === "OTHER" || !response.ok) {
+                            if (attempt === maxRetries - 1) { 
+                                throw new Error("TTS model could not generate audio. The text may be too short or flagged.");
+                            }
+                        } else {
+                            throw new Error("Invalid or missing audio data in TTS API response structure.");
+                        }
+                    } else {
+                        // Success path
+                        const audioData = part.inlineData.data;
+                        const mimeType = part.inlineData.mimeType;
+                        
+                        const rateMatch = mimeType.match(/rate=(\d+)/);
+                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                        const pcmData = base64ToArrayBuffer(audioData); 
+                        const pcm16 = new Int16Array(pcmData);
+                        
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        
+                        // If this is the dedicated correct audio element, manage its URL globally
+                        if (audioElement.id === 'correct-audio-playback') {
+                            if (correctAudioUrl) URL.revokeObjectURL(correctAudioUrl); // Revoke old one
+                            correctAudioUrl = audioUrl; // Store new one
+                        }
+
+                        audioElement.src = audioUrl;
+                        audioElement.load(); 
+                        return; // Exit successfuly
+                    }
+
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed.`, error);
+                    if (attempt === maxRetries - 1) {
+                        throw error;
+                    }
+                }
+
+                // Exponential backoff
+                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500); 
+                console.warn(`Retrying TTS in ${Math.ceil(delay / 1000)}s...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
 
-        // Initialize voice list
-        if (synth) {
-            populateVoiceList();
-            // In case voices load after the initial call
-            if (synth.onvoiceschanged !== undefined) {
-                synth.onvoiceschanged = populateVoiceList;
-            }
-        } else {
-            voiceSelect.innerHTML = 'TTS Not Supported';
-            document.getElementById('tts-button').disabled = true;
-            updateTtsStatus("Your browser does not support native Text-to-Speech.", true);
-        }
+        // --- Section 1: AI Speaks (TTS) ---
 
-        window.speakText = function() {
+        window.speakText = async function() {
             const text = document.getElementById('tts-input').value.trim();
-            const selectedVoiceName = voiceSelect.value;
+            const voiceName = document.getElementById('voice-select').value;
             const ttsButton = document.getElementById('tts-button');
-
-            if (!synth) return;
-
-            // If speaking, stop it (used as a toggle/cancel)
-            if (synth.speaking) {
-                synth.cancel();
-                ttsButtonText.textContent = 'Read Aloud';
-                updateTtsStatus("Stopped current playback.");
-                return;
-            }
+            const loader = document.getElementById('tts-loader');
+            const icon = document.getElementById('tts-icon');
+            const tempAudio = new Audio(); // Use temporary audio element for playback
 
             if (!text) {
-                updateTtsStatus("Please enter some text for the coach to speak.", true);
+                updateStatus("Please enter some text for the AI to speak.", true);
                 return;
             }
 
-            updateTtsStatus("Reading aloud…");
-            ttsButtonText.textContent = 'Stop Reading';
-
-            const utterance = new SpeechSynthesisUtterance(text);
+            // Sanitize text for TTS (removing confusing symbols but keeping basic punctuation)
+            const cleanText = text.replace(/[^a-zA-Z0-9\s.,?!]/g, '').trim();
             
-            // Ensure high volume
-            utterance.volume = 1; 
-
-            const selectedVoice = availableVoices.find(voice => voice.name === selectedVoiceName);
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
+            if (cleanText.length < 3) {
+                 updateStatus("Text is too short for speech generation (minimum 3 characters required after cleanup).", true);
+                 return;
             }
+            
+            ttsButton.disabled = true;
+            icon.classList.add('hidden');
+            loader.classList.remove('hidden');
+            updateStatus("Generating speech, please wait...");
 
-            utterance.onstart = () => {
-                // Ensure the button says stop while playing
-                ttsButtonText.textContent = 'Stop Reading';
+            try {
+                // generateTtsAudio handles stabilization and retries internally
+                await generateTtsAudio(cleanText, voiceName, tempAudio);
+
+                tempAudio.play();
+                updateStatus("Audio is playing!");
+                tempAudio.onended = () => {
+                     updateStatus("AI finished speaking. Try repeating the phrase!");
+                };
+
+            } catch (error) {
+                console.error("TTS Error:", error);
+                updateStatus(`Error generating speech: ${error.message}.`, true);
+            } finally {
+                ttsButton.disabled = false;
+                loader.classList.add('hidden');
+                icon.classList.remove('hidden');
             }
-
-            utterance.onend = () => {
-                ttsButtonText.textContent = 'Read Aloud';
-                updateTtsStatus("AI finished speaking. Try repeating the phrase!");
-            };
-
-            utterance.onerror = (event) => {
-                ttsButtonText.textContent = 'Read Aloud';
-                updateTtsStatus(`Error: Text-to-Speech failed. ${event.error}`, true);
-            };
-
-            synth.speak(utterance);
         }
 
-        // ——————————————————————————
-        // — Section 2: User Speaks (ASR & Correction) – API Logic Below —
-        // ——————————————————————————
+        // --- Section 2: User Speaks (ASR & Correction) ---
 
-        // Function to convert Blob to Base64 (needed for ASR API call)
+        let mediaRecorder;
+        let audioChunks = [];
+        let finalAudioBlob = null;
+        let recordingStartTime;
+
+        const recordButton = document.getElementById('record-button');
+        const stopButton = document.getElementById('stop-button');
+        const submitButton = document.getElementById('submit-audio-button');
+        const audioPlayback = document.getElementById('audio-playback');
+        
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const correctionOutput = document.getElementById('correction-output');
+        
+        // UI elements
+        const targetPhraseDisplay = document.getElementById('target-phrase-display');
+        const correctAudioContainer = document.getElementById('correct-audio-container');
+        const correctAudioPlayback = document.getElementById('correct-audio-playback');
+        const correctAudioLabel = document.getElementById('correct-audio-label');
+        
+        const recordText = document.getElementById('record-text');
+
+        // Function to convert Blob to Base64
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -330,135 +433,112 @@
                 reader.readAsDataURL(blob);
             });
         }
+        
+        /**
+         * Checks the current microphone permission status and updates the UI accordingly.
+         * @returns {boolean} True if recording can proceed (prompt or granted), False if blocked.
+         */
+        async function checkMicrophonePermission() {
+            const statusEl = document.getElementById('status-message');
+            try {
+                const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
 
-        let mediaRecorder;
-        let audioChunks = [];
-        let finalAudioBlob = null;
-        let recordingStartTime;
-
-        const audioPlayback = document.getElementById('audio-playback');
-        const feedbackArea = document.getElementById('feedback-area');
-        const feedbackTitle = document.getElementById('feedback-title');
-        const correctionOutput = document.getElementById('correction-output');
-
-        // UI elements
-        const targetPhraseDisplay = document.getElementById('target-phrase-display');
-        const correctAudioContainer = document.getElementById('correct-audio-container');
-        const correctAudioLabel = document.getElementById('correct-audio-label');
+                if (permissionStatus.state === 'denied') {
+                    recordButton.disabled = true;
+                    submitButton.disabled = true;
+                    statusEl.innerHTML = `
+                        <div class="p-3 bg-red-100 border border-red-300 rounded-lg">
+                            <p class="text-base text-red-700 font-bold">⚠️ Microphone Access Blocked</p>
+                            <p class="text-sm text-red-600 mt-1">Your browser settings are permanently blocking microphone access for this site. Because you previously denied it, the browser will not prompt you again.</p>
+                            <p class="text-sm text-red-600 mt-2 font-bold">To fix this, you must manually go to your browser's site settings and change the microphone permission from 'Block' to 'Ask' or 'Allow'.</p>
+                        </div>
+                    `;
+                    return false;
+                } else if (permissionStatus.state === 'prompt') {
+                    statusEl.textContent = "Microphone ready to be requested. Click 'Start Recording' to see the browser prompt.";
+                    recordButton.disabled = false;
+                } else if (permissionStatus.state === 'granted') {
+                    statusEl.textContent = "Microphone access is already granted! Click 'Start Recording' to begin.";
+                    recordButton.disabled = false;
+                }
+                return true;
+            } catch (e) {
+                // Fallback for browsers that don't support navigator.permissions.query
+                console.warn("Could not query microphone permission status, falling back to attempting access:", e);
+                statusEl.textContent = "Microphone status uncertain. Click 'Start Recording' to test access.";
+                return true; 
+            }
+        }
 
 
         window.startRecording = async function() {
-            // Stop any ongoing native TTS before recording starts
-            if (synth && synth.speaking) {
-                synth.cancel();
-                document.getElementById('tts-button-text').textContent = 'Read Aloud';
+            // Check permission status before trying to record
+            const canProceed = await checkMicrophonePermission();
+            if (!canProceed) {
+                return;
             }
 
-            // Reset UI state before starting the process
-            recordButton.disabled = true;
-            stopButton.disabled = true;
-            recordButton.classList.remove('recording-active');
-            recordText.textContent = 'Start Recording';
-            submitButton.disabled = true;
-
             try {
-                revokeObjectUrls(); // Clear all previous results/status
-                audioPlayback.src = "";
-                audioPlayback.classList.add('hidden');
-                feedbackArea.classList.add('hidden');
-                correctionOutput.textContent = "";
-                
-                correctAudioContainer.classList.remove('hidden');
-                correctAudioLabel.textContent = "Waiting for analysis to generate correct pronunciation…";
-                
-                // Request microphone access, which will prompt the user if needed
+                // IMPORTANT: Revoke all old Blob URLs before starting a new recording process
+                revokeObjectUrls();
+
+                // Request microphone access
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
+
                 audioChunks = [];
                 finalAudioBlob = null;
+                audioPlayback.src = '';
+                audioPlayback.classList.add('hidden');
+                feedbackArea.classList.add('hidden');
+                correctionOutput.textContent = '';
+                correctAudioPlayback.src = ''; // Clear correct audio source
+                
+                // Set initial status for correction audio
+                correctAudioContainer.classList.remove('hidden'); 
+                correctAudioLabel.textContent = "Waiting for analysis to generate correct pronunciation...";
 
-                // Check if MediaRecorder is supported before proceeding
-                if (!window.MediaRecorder) {
-                    stream.getTracks().forEach(track => track.stop());
-                    updateMicStatus("Error: MediaRecorder is not supported by your browser.", true);
-                    recordButton.disabled = false;
-                    return;
-                }
 
-                // MediaRecorder initialization: allows browser to select compatible format
-                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
                 mediaRecorder.ondataavailable = event => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
+                    audioChunks.push(event.data);
                 };
 
                 mediaRecorder.onstop = () => {
-                    // Stop the stream tracks immediately to release the microphone
-                    stream.getTracks().forEach(track => track.stop());
-                    stopButton.disabled = true;
-
-                    if (audioChunks.length === 0) {
-                        updateMicStatus("Recording failed: Captured no audio data.", true);
-                        recordButton.disabled = false;
-                        return;
-                    }
-
-                    // Use the MIME type from the first chunk recorded by the browser
-                    finalAudioBlob = new Blob(audioChunks, { type: audioChunks[0].type });
+                    finalAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    
+                    // Store the user audio URL globally and assign
                     userAudioUrl = URL.createObjectURL(finalAudioBlob);
-
                     audioPlayback.src = userAudioUrl;
+
                     audioPlayback.classList.remove('hidden');
                     submitButton.disabled = false;
                     recordButton.disabled = false;
                     recordButton.classList.remove('recording-active');
                     recordText.textContent = 'Record Again';
-
+                    stream.getTracks().forEach(track => track.stop()); // Stop the mic stream
                     const duration = ((Date.now() - recordingStartTime) / 1000).toFixed(1);
-                    const mime = finalAudioBlob.type || 'unknown format'; // Get the actual MIME type used
-                    updateMicStatus(`Recording stopped. Duration: ${duration}s. Format: ${mime}. Press ‘Analyze Pronunciation’.`, false);
-                };
-
-                // Add an onerror handler for the recorder itself
-                mediaRecorder.onerror = (event) => {
-                    console.error("MediaRecorder Error:", event.error);
-                    stream.getTracks().forEach(track => track.stop());
-                    updateMicStatus(`Recording error: ${event.error.name} – ${event.error.message}`, true);
-                    recordButton.disabled = false;
-                    stopButton.disabled = true;
-                    recordButton.classList.remove('recording-active');
-                    recordText.textContent = 'Start Recording';
+                    updateStatus(`Recording stopped. Duration: ${duration}s. Press 'Analyze Pronunciation' for feedback.`);
                 };
 
                 mediaRecorder.start();
                 recordingStartTime = Date.now();
-
-                // Update UI for recording state
+                submitButton.disabled = true;
                 recordButton.disabled = true;
                 stopButton.disabled = false;
                 recordButton.classList.add('recording-active');
-                recordText.textContent = 'Recording…';
-                updateMicStatus("Recording started. Speak clearly now…", false);
+                recordText.textContent = 'Recording...';
+                updateStatus("Recording started. Please speak clearly.");
 
             } catch (error) {
-                // — ENHANCED ERROR HANDLING —
-                console.error("Microphone access failed:", error);
-                recordButton.disabled = false; // Re-enable the button after failure
-                stopButton.disabled = true;
-                recordButton.classList.remove('recording-active');
-                recordText.textContent = 'Start Recording';
-
+                console.error("Microphone access error:", error);
+                // Simple error message here, as checkMicrophonePermission handles the detailed block message
                 if (error.name === "NotAllowedError" || error.message.includes("Permission denied")) {
-                    updateMicStatus(`Error: Microphone access **blocked**. Please enable it in your browser settings or check the iFrame permissions on your WordPress site.`, true);
-                } else if (error.name === "NotFoundError") {
-                    updateMicStatus("Error: No microphone device found on this device.", true);
-                } else if (error.name === "NotReadableError") {
-                    updateMicStatus("Error: The microphone is already in use by another app or tab.", true);
+                    updateStatus("Microphone access was denied. Please ensure you click 'Allow' in the browser pop-up.", true);
+                    recordButton.disabled = false; // Allow user to try again
                 } else {
-                    // Display the specific technical error name and message
-                    updateMicStatus(`Technical Error: ${error.name} – ${error.message}.`, true);
+                    updateStatus(`Error accessing microphone: ${error.message}.`, true);
+                    recordButton.disabled = false; // Allow user to try again
                 }
             }
         }
@@ -470,9 +550,20 @@
             }
         }
 
+        /**
+         * Cleans a string for TTS/ASR by removing characters that often confuse the models.
+         * @param {string} text - The input phrase.
+         * @returns {string} - The sanitized phrase.
+         */
+        function sanitizeText(text) {
+             // Keep alphanumeric characters, spaces, and standard punctuation (. , ? !)
+            return text.replace(/[^a-zA-Z0-9\s.,?!]/g, '').trim();
+        }
+
+
         window.submitAudioForCorrection = async function() {
             if (!finalAudioBlob) {
-                updateMicStatus("Please record your speech first.", true);
+                updateStatus("Please record your speech first.", true);
                 return;
             }
 
@@ -480,30 +571,40 @@
             recordButton.disabled = true;
             const loader = document.getElementById('correction-loader');
             const icon = document.getElementById('correction-icon');
-
+            
             // Hide previous results and clear state
             icon.classList.add('hidden');
             loader.classList.remove('hidden');
             feedbackArea.classList.add('hidden');
-            correctionOutput.textContent = "";
-
-            // Prepare for correct pronunciation audio status
-            correctAudioContainer.classList.remove('hidden');
-            correctAudioLabel.textContent = "AI is analyzing your speech…";
-            updateMicStatus("Analyzing pronunciation with AI, this may take a moment…");
+            correctionOutput.textContent = '';
+            
+            // Prepare for correction audio generation status
+            correctAudioPlayback.src = ''; 
+            correctAudioContainer.classList.remove('hidden'); 
+            correctAudioLabel.textContent = "AI is analyzing your speech...";
+            
+            updateStatus("Analyzing pronunciation with AI, this may take a moment...");
 
             try {
                 // 1. Convert audio blob to Base64
                 const base64Audio = await blobToBase64(finalAudioBlob);
-                const mimeTypeUsed = finalAudioBlob.type || 'audio/webm'; // Use recorded type or fallback
 
                 // 2. Define the JSON schema for structured correction output
                 const CorrectionSchema = {
                     type: "OBJECT",
                     properties: {
-                        targetPhrase: { type: "STRING", description: "The full, correctly spelled phrase the user was attempting to say. This should be the text the user should practice." },
-                        feedback: { type: "STRING", description: "Detailed, constructive feedback on accent, intonation, and clarity, provided in plain text. Include the full transcription of what you heard in this field." },
-                        isPronunciationCorrect: { type: "BOOLEAN", description: "Set to true if the transcription closely matches the target phrase and the pronunciation is excellent, otherwise false." }
+                        targetPhrase: {
+                            type: "STRING",
+                            description: "The full, correctly spelled phrase the user was attempting to say. This should be the text the user should practice."
+                        },
+                        feedback: {
+                            type: "STRING",
+                            description: "Detailed, constructive feedback on accent, intonation, and clarity, provided in plain text. Include the full transcription of what you heard in this field."
+                        },
+                        isPronunciationCorrect: {
+                            type: "BOOLEAN",
+                            description: "Set to true if the transcription closely matches the target phrase and the pronunciation is excellent, otherwise false."
+                        }
                     },
                     propertyOrdering: ["targetPhrase", "feedback", "isPronunciationCorrect"]
                 };
@@ -511,8 +612,6 @@
                 // 3. Prepare the API payload for multimodal call with structured output
                 const systemPrompt = "You are an expert English pronunciation coach. Analyze the provided audio recording. Provide a friendly, constructive, and detailed response in the requested JSON format. The 'targetPhrase' must be the correctly spelled version of the sentence the user was trying to say. The 'feedback' must be provided in PLAIN TEXT without any markdown elements (no bolding, no italics, no headings like # or **). Set 'isPronunciationCorrect' to true if the pronunciation is nearly perfect, otherwise false.";
                 const userQuery = "Analyze the pronunciation and provide detailed correction feedback for this audio. Focus on the clarity and accent, and identify the target phrase I was trying to say.";
-                
-                // Exponential backoff retry logic is implicitly handled by the runtime environment.
                 const apiUrl = `${apiUrlBase}/${correctionModel}:generateContent?key=${apiKey}`;
 
                 const payload = {
@@ -521,15 +620,13 @@
                             { text: userQuery },
                             {
                                 inlineData: {
-                                    mimeType: mimeTypeUsed, // Use the dynamically determined MIME type
+                                    mimeType: 'audio/webm',
                                     data: base64Audio
                                 }
                             }
                         ]
                     }],
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    },
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
                     generationConfig: {
                         responseMimeType: "application/json",
                         responseSchema: CorrectionSchema
@@ -544,14 +641,33 @@
                 });
 
                 const result = await response.json();
+                
                 let parsedJson;
-
                 try {
-                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!jsonText) throw new Error("AI returned empty content.");
+                    let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!jsonText) {
+                         console.error("AI returned empty content or structure.", result);
+                         throw new Error("AI returned empty content or structure.");
+                    }
+                    
+                    // *** FIX: Robustly strip markdown and preambles from the JSON string ***
+                    jsonText = jsonText.trim();
+                    if (jsonText.startsWith("```json")) {
+                        jsonText = jsonText.substring(7);
+                    } else if (jsonText.startsWith("```")) {
+                        jsonText = jsonText.substring(3);
+                    }
+                    if (jsonText.endsWith("```")) {
+                        jsonText = jsonText.substring(0, jsonText.length - 3);
+                    }
+                    jsonText = jsonText.trim(); 
+                    // *** END FIX ***
+                    
                     parsedJson = JSON.parse(jsonText);
                 } catch (e) {
-                    throw new Error("AI response was not valid JSON. Please try again.");
+                    console.error("JSON Parsing Error (Raw API Response):", result);
+                    console.error("JSON Parsing Error (Cleaned Text Attempt):", jsonText);
+                    throw new Error("AI response was not valid JSON. This could be due to a malformed response from the AI model.");
                 }
 
                 const { targetPhrase, feedback, isPronunciationCorrect } = parsedJson;
@@ -572,57 +688,58 @@
                     // 6. Apply title styling and text
                     feedbackTitle.className = `text-lg font-semibold ${titleColor}`;
                     feedbackTitle.textContent = titleText;
-
+                    
                     // 7. Set and display the Target Phrase (ALWAYS VISIBLE)
-                    targetPhraseDisplay.textContent = `Target Phrase: “${targetPhrase}”`;
+                    targetPhraseDisplay.textContent = `Target Phrase: "${targetPhrase}"`;
                     targetPhraseDisplay.className = `text-sm mt-2 italic font-semibold ${phraseColor}`;
-
+                    
                     // 8. Display the text feedback
                     correctionOutput.textContent = feedback;
-
-                    // 9. Prepare for Correct Pronunciation Audio Status (Now uses native TTS)
-                    correctAudioContainer.classList.remove('hidden');
-                    correctAudioLabel.textContent = "Generating correct pronunciation…";
+                    
+                    // 9. Prepare for Correct Pronunciation Audio Generation
+                    correctAudioContainer.classList.remove('hidden'); 
+                    correctAudioLabel.textContent = "Generating correct pronunciation...";
                     correctAudioContainer.classList.add('border-t', 'p-3', isCorrect ? 'border-green-200' : 'border-yellow-200');
                     correctAudioLabel.classList.add(isCorrect ? 'text-green-700' : 'text-yellow-700');
 
-                    // 10. Generate correct audio for reference using Native TTS
-                    updateMicStatus(`Analysis complete. Now generating correct audio for reference…`);
+
+                    // 10. Always attempt to generate correct audio if a target phrase exists
+                    updateStatus(`Analysis complete. Now generating correct audio for reference...`);
                     
-                    if (synth && targetPhrase.length > 2) {
-                        try {
-                            const utterance = new SpeechSynthesisUtterance(targetPhrase);
-                            // Ensure high volume
-                            utterance.volume = 1; 
-                            
-                            // Try to find the user’s currently selected voice for consistency
-                            const selectedVoiceName = voiceSelect.value;
-                            const selectedVoice = availableVoices.find(voice => voice.name === selectedVoiceName);
-                            if (selectedVoice) {
-                                utterance.voice = selectedVoice;
-                            }
-                            
-                            synth.speak(utterance);
-                            correctAudioLabel.textContent = `Correct Pronunciation Playing Now (using browser voice: ${selectedVoice?.name || 'Default'}).`;
-                        } catch (ttsError) {
-                            correctAudioLabel.textContent = `Error: Could not play back correct audio (Native TTS failed).`;
-                        }
-                    } else {
-                        correctAudioLabel.textContent = "Could not play back correct audio (TTS unavailable or phrase too short).";
+                    const cleanTargetPhrase = sanitizeText(targetPhrase);
+                    
+                    if (!cleanTargetPhrase || cleanTargetPhrase.trim().length < 3) { 
+                        correctAudioLabel.textContent = "Error: Cannot generate audio. The identified practice phrase is too short (min 3 characters).";
+                        correctAudioPlayback.src = ''; 
+                        updateStatus(`Analysis complete, but failed to generate correction audio: The practice phrase is too short.`, true);
+                        return; 
                     }
-
-                    // Final status update (regardless of reference audio status)
-                    updateMicStatus(isCorrect ? "Fantastic! Your pronunciation was clear and accurate." : "Analysis and correction complete! Listen and practice the target phrase.");
-
+                    
+                    try {
+                        // Generate and display the correct audio using the stabilized, retrying function
+                        await generateTtsAudio(cleanTargetPhrase, 'Kore', correctAudioPlayback);
+                        
+                        // Final status update
+                        updateStatus(isCorrect ? "Fantastic! Your pronunciation was clear and accurate. Listen to the AI's pronunciation for reference." : "Analysis and correction audio complete! Listen and practice.");
+                        
+                    } catch (ttsError) {
+                        console.error("Correction TTS Error:", ttsError);
+                        
+                        // Handle failure gracefully
+                        correctAudioLabel.textContent = `Error: Could not generate correct audio. (${ttsError.message})`;
+                        correctAudioPlayback.src = '';
+                        updateStatus(`Analysis complete, but failed to generate correction audio: ${ttsError.message}`, true);
+                    }
+                    
                 } else {
                     throw new Error("AI returned an incomplete correction structure (missing targetPhrase or feedback).");
                 }
 
             } catch (error) {
+                console.error("Analysis Error:", error);
                 correctionOutput.textContent = `Sorry, an error occurred during analysis: ${error.message}`;
                 feedbackArea.classList.remove('hidden');
-                updateMicStatus("Failed to analyze audio. Please try recording again or check the console.", true);
-
+                updateStatus("Failed to analyze audio. Please try recording again or check the console.", true);
             } finally {
                 submitButton.disabled = false;
                 recordButton.disabled = false;
@@ -631,20 +748,10 @@
             }
         }
         
-        // Ensure functions are available globally if called from onclick handlers
-        window.startRecording = startRecording;
-        window.stopRecording = stopRecording;
-        window.submitAudioForCorrection = submitAudioForCorrection;
-
-        // Run this on load to ensure voice list is updated even if the user interacts immediately
+        // --- Run Initial Check on Load ---
         window.onload = function() {
-             if (synth && synth.onvoiceschanged !== undefined) {
-                synth.onvoiceschanged = populateVoiceList;
-            }
-            // Check if voices loaded, otherwise load immediately if possible
-            if (availableVoices.length === 0) {
-                 populateVoiceList();
-            }
+            // Check microphone status immediately when the page loads
+            checkMicrophonePermission(); 
         };
 
     </script>
