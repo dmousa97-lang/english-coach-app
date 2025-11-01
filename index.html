@@ -585,6 +585,9 @@
             
             updateStatus("Analyzing pronunciation with AI, this may take a moment...");
 
+            let parsedJson;
+            let jsonText; // <-- Declaration moved here to ensure scope access in catch block
+
             try {
                 // 1. Convert audio blob to Base64
                 const base64Audio = await blobToBase64(finalAudioBlob);
@@ -642,33 +645,27 @@
 
                 const result = await response.json();
                 
-                let parsedJson;
-                try {
-                    let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!jsonText) {
-                         console.error("AI returned empty content or structure.", result);
-                         throw new Error("AI returned empty content or structure.");
-                    }
-                    
-                    // *** FIX: Robustly strip markdown and preambles from the JSON string ***
-                    jsonText = jsonText.trim();
-                    if (jsonText.startsWith("```json")) {
-                        jsonText = jsonText.substring(7);
-                    } else if (jsonText.startsWith("```")) {
-                        jsonText = jsonText.substring(3);
-                    }
-                    if (jsonText.endsWith("```")) {
-                        jsonText = jsonText.substring(0, jsonText.length - 3);
-                    }
-                    jsonText = jsonText.trim(); 
-                    // *** END FIX ***
-                    
-                    parsedJson = JSON.parse(jsonText);
-                } catch (e) {
-                    console.error("JSON Parsing Error (Raw API Response):", result);
-                    console.error("JSON Parsing Error (Cleaned Text Attempt):", jsonText);
-                    throw new Error("AI response was not valid JSON. This could be due to a malformed response from the AI model.");
+                // Assign value to jsonText inside the try block
+                jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) {
+                     console.error("AI returned empty content or structure.", result);
+                     throw new Error("AI returned empty content or structure.");
                 }
+                
+                // *** FIX: Robustly strip markdown and preambles from the JSON string ***
+                jsonText = jsonText.trim();
+                if (jsonText.startsWith("```json")) {
+                    jsonText = jsonText.substring(7);
+                } else if (jsonText.startsWith("```")) {
+                    jsonText = jsonText.substring(3);
+                }
+                if (jsonText.endsWith("```")) {
+                    jsonText = jsonText.substring(0, jsonText.length - 3);
+                }
+                jsonText = jsonText.trim(); 
+                // *** END FIX ***
+                
+                parsedJson = JSON.parse(jsonText);
 
                 const { targetPhrase, feedback, isPronunciationCorrect } = parsedJson;
                 const isCorrect = isPronunciationCorrect === true;
