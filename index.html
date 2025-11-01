@@ -632,6 +632,8 @@
                 const apiUrl = `${apiUrlBase}/${correctionModel}:generateContent?key=${apiKey}`;
 
                 const payload = {
+                    // *** REVISED PAYLOAD STRUCTURE TO BE MORE EXPLICIT ***
+                    model: correctionModel, 
                     contents: [{
                         parts: [
                             { text: userQuery },
@@ -649,6 +651,7 @@
                         responseSchema: CorrectionSchema
                     }
                 };
+                // *** END REVISED PAYLOAD ***
 
                 // 4. Call the Correction API
                 const response = await fetch(apiUrl, {
@@ -659,7 +662,7 @@
 
                 const result = await response.json();
                 
-                // --- NEW: Handle 403 Authentication Error explicitly ---
+                // --- Handle 403 Authentication Error explicitly ---
                 if (!response.ok) {
                     if (response.status === 403) {
                          throw new Error("Authentication Failed (403). The API key was rejected. This is usually an environmental issue. Please try again in a moment.");
