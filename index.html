@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI English Accent Coach</title>
+    <title>AI English Coach</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -566,6 +566,14 @@
                 updateStatus("Please record your speech first.", true);
                 return;
             }
+            
+            // --- NEW: Sanity check for small/empty audio file ---
+            if (finalAudioBlob.size < 1024) { // Check if file is less than 1KB
+                updateStatus("Recorded audio file is too small. Please ensure your microphone is working and you spoke for at least 1 second.", true);
+                submitButton.disabled = false;
+                recordButton.disabled = false;
+                return;
+            }
 
             submitButton.disabled = true;
             recordButton.disabled = true;
@@ -586,7 +594,7 @@
             updateStatus("Analyzing pronunciation with AI, this may take a moment...");
 
             let parsedJson;
-            let jsonText; // <-- Declaration moved here to ensure scope access in catch block
+            let jsonText; 
 
             try {
                 // 1. Convert audio blob to Base64
@@ -645,23 +653,27 @@
 
                 const result = await response.json();
                 
-                // Assign value to jsonText inside the try block
+                // --- NEW: Log the full result for debugging empty content ---
+                console.log("Full AI Response for Correction:", result);
+
+                // Assign value to jsonText 
                 jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) {
-                     console.error("AI returned empty content or structure.", result);
+                     // Check if the model timed out or returned an error status in the outer response
+                     if (!response.ok) {
+                        throw new Error(`API call failed with status ${response.status}. Details: ${result.error?.message || 'Unknown error.'}`);
+                     }
+                     
+                     // Handle the case where the status is OK but the content is empty
+                     console.error("AI returned empty content or structure in candidates part.", result);
                      throw new Error("AI returned empty content or structure.");
                 }
                 
                 // *** FIX: Robustly strip markdown and preambles from the JSON string ***
                 jsonText = jsonText.trim();
-                if (jsonText.startsWith("```json")) {
-                    jsonText = jsonText.substring(7);
-                } else if (jsonText.startsWith("```")) {
-                    jsonText = jsonText.substring(3);
-                }
-                if (jsonText.endsWith("```")) {
-                    jsonText = jsonText.substring(0, jsonText.length - 3);
-                }
+                // Strip common markdown wrappers: ```json, ```JSON, or just ```
+                jsonText = jsonText.replace(/^```(json|JSON)?\s*/, '');
+                jsonText = jsonText.replace(/\s*```$/, '');
                 jsonText = jsonText.trim(); 
                 // *** END FIX ***
                 
@@ -734,7 +746,7 @@
 
             } catch (error) {
                 console.error("Analysis Error:", error);
-                correctionOutput.textContent = `Sorry, an error occurred during analysis: ${error.message}`;
+                correctionOutput.textContent = `Sorry, an error occurred during analysis: ${error.message}. Please try recording again, ensuring you speak clearly for at least 3 seconds.`;
                 feedbackArea.classList.remove('hidden');
                 updateStatus("Failed to analyze audio. Please try recording again or check the console.", true);
             } finally {
