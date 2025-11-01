@@ -148,7 +148,9 @@
     <script type="module">
         // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const apiKey = "" // API key is handled automatically by the environment
+        
+        // IMPORTANT: The apiKey MUST be an empty string for the environment to inject the key during runtime.
+        const apiKey = "" 
         const ttsModel = 'gemini-2.5-flash-preview-tts';
         const correctionModel = 'gemini-2.5-flash-preview-09-2025';
         const apiUrlBase = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -294,48 +296,52 @@
 
                     const result = await response.json();
                     
-                    const candidate = result.candidates?.[0];
-                    // Look for the audio part with the L16 MIME type
-                    const part = candidate?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.startsWith('audio/L16'));
+                    if (!response.ok) {
+                        const errorMsg = result.error?.message || `API call failed with status ${response.status}.`;
+                        console.error(`Attempt ${attempt + 1} failed: ${errorMsg}`, result);
+                        if (attempt === maxRetries - 1) {
+                            throw new Error(`TTS API failed to authenticate or respond: ${errorMsg}`);
+                        }
+                        // Continue to backoff/retry
+                    } else {
+                        // Look for the audio part with the L16 MIME type
+                        const candidate = result.candidates?.[0];
+                        const part = candidate?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.startsWith('audio/L16'));
 
-
-                    if (!part || !part.inlineData || !part.inlineData.data) {
-                         console.error(`Attempt ${attempt + 1} failed: TTS API Response missing audio data.`, result);
-                        
-                        if (candidate?.finishReason === "OTHER" || !response.ok) {
+                        if (!part || !part.inlineData || !part.inlineData.data) {
+                            console.error(`Attempt ${attempt + 1} failed: TTS API Response missing audio data.`, result);
                             if (attempt === maxRetries - 1) { 
                                 throw new Error("TTS model could not generate audio. The text may be too short or flagged.");
                             }
+                            // Continue to backoff/retry
                         } else {
-                            throw new Error("Invalid or missing audio data in TTS API response structure.");
-                        }
-                    } else {
-                        // Success path
-                        const audioData = part.inlineData.data;
-                        const mimeType = part.inlineData.mimeType;
-                        
-                        const rateMatch = mimeType.match(/rate=(\d+)/);
-                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                            // Success path
+                            const audioData = part.inlineData.data;
+                            const mimeType = part.inlineData.mimeType;
+                            
+                            const rateMatch = mimeType.match(/rate=(\d+)/);
+                            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
 
-                        const pcmData = base64ToArrayBuffer(audioData); 
-                        const pcm16 = new Int16Array(pcmData);
-                        
-                        const wavBlob = pcmToWav(pcm16, sampleRate);
-                        const audioUrl = URL.createObjectURL(wavBlob);
-                        
-                        // If this is the dedicated correct audio element, manage its URL globally
-                        if (audioElement.id === 'correct-audio-playback') {
-                            if (correctAudioUrl) URL.revokeObjectURL(correctAudioUrl); // Revoke old one
-                            correctAudioUrl = audioUrl; // Store new one
-                        }
+                            const pcmData = base64ToArrayBuffer(audioData); 
+                            const pcm16 = new Int16Array(pcmData);
+                            
+                            const wavBlob = pcmToWav(pcm16, sampleRate);
+                            const audioUrl = URL.createObjectURL(wavBlob);
+                            
+                            // If this is the dedicated correct audio element, manage its URL globally
+                            if (audioElement.id === 'correct-audio-playback') {
+                                if (correctAudioUrl) URL.revokeObjectURL(correctAudioUrl); // Revoke old one
+                                correctAudioUrl = audioUrl; // Store new one
+                            }
 
-                        audioElement.src = audioUrl;
-                        audioElement.load(); 
-                        return; // Exit successfuly
+                            audioElement.src = audioUrl;
+                            audioElement.load(); 
+                            return; // Exit successfuly
+                        }
                     }
 
                 } catch (error) {
-                    console.error(`Attempt ${attempt + 1} failed.`, error);
+                    console.error(`Attempt ${attempt + 1} failed with unhandled error.`, error);
                     if (attempt === maxRetries - 1) {
                         throw error;
                     }
@@ -567,7 +573,7 @@
                 return;
             }
             
-            // --- NEW: Sanity check for small/empty audio file ---
+            // --- Sanity check for small/empty audio file ---
             if (finalAudioBlob.size < 1024) { // Check if file is less than 1KB
                 updateStatus("Recorded audio file is too small. Please ensure your microphone is working and you spoke for at least 1 second.", true);
                 submitButton.disabled = false;
@@ -653,29 +659,28 @@
 
                 const result = await response.json();
                 
-                // --- NEW: Log the full result for debugging empty content ---
-                console.log("Full AI Response for Correction:", result);
-
-                // Assign value to jsonText 
+                // --- NEW: Handle 403 Authentication Error explicitly ---
+                if (!response.ok) {
+                    if (response.status === 403) {
+                         throw new Error("Authentication Failed (403). The API key was rejected. This is usually an environmental issue. Please try again in a moment.");
+                    }
+                    const errorMsg = result.error?.message || `API call failed with status ${response.status}.`;
+                    console.error("API Call Error Details:", result);
+                    throw new Error(errorMsg);
+                }
+                
                 jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) {
-                     // Check if the model timed out or returned an error status in the outer response
-                     if (!response.ok) {
-                        throw new Error(`API call failed with status ${response.status}. Details: ${result.error?.message || 'Unknown error.'}`);
-                     }
-                     
                      // Handle the case where the status is OK but the content is empty
                      console.error("AI returned empty content or structure in candidates part.", result);
                      throw new Error("AI returned empty content or structure.");
                 }
                 
-                // *** FIX: Robustly strip markdown and preambles from the JSON string ***
+                // Robustly strip markdown and preambles from the JSON string
                 jsonText = jsonText.trim();
-                // Strip common markdown wrappers: ```json, ```JSON, or just ```
                 jsonText = jsonText.replace(/^```(json|JSON)?\s*/, '');
                 jsonText = jsonText.replace(/\s*```$/, '');
                 jsonText = jsonText.trim(); 
-                // *** END FIX ***
                 
                 parsedJson = JSON.parse(jsonText);
 
@@ -746,7 +751,14 @@
 
             } catch (error) {
                 console.error("Analysis Error:", error);
-                correctionOutput.textContent = `Sorry, an error occurred during analysis: ${error.message}. Please try recording again, ensuring you speak clearly for at least 3 seconds.`;
+                
+                // --- Updated message for 403 error ---
+                let displayMessage = `Sorry, an error occurred during analysis: ${error.message}.`;
+                if (error.message.includes("403")) {
+                    displayMessage = "Authentication Error (403): The system failed to load the necessary credentials. Please refresh the page and try again.";
+                }
+                
+                correctionOutput.textContent = displayMessage;
                 feedbackArea.classList.remove('hidden');
                 updateStatus("Failed to analyze audio. Please try recording again or check the console.", true);
             } finally {
